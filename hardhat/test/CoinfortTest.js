@@ -90,6 +90,7 @@ describe("Coinfort Test", function () {
     await coinfort.connect(owner).pauseAccountSwitch(sender.address, true);
     await expectException(coinfort.connect(receiver).closeTransaction(0), "Coinfort investigating the account!");
     await coinfort.connect(owner).pauseAccountSwitch(sender.address, false);
+    await expectException(coinfort.connect(sender).pauseTransactionSwitch(0, true), 'Caller is not the owner neither manager!');
     await coinfort.connect(owner).pauseTransactionSwitch(0, true);
     await expectException(coinfort.connect(receiver).closeTransaction(0), "Coinfort investigating the transaction!");
     await coinfort.connect(owner).pauseTransactionSwitch(0, false);
@@ -120,8 +121,10 @@ describe("Coinfort Test", function () {
     await expectException(coinfort.connect(receiver).closeTransaction(2), "Transaction with the given ID is not found!");
     await expectException(coinfort.connect(receiver).closeTransaction(1), "To close a transaction there has to be either a timeout or Oracle condition!");
 
+    await expectException(coinfort.connect(sender).setOracleAddress(oracle.address), 'Caller is not the owner neither manager!');
     await coinfort.connect(owner).setOracleAddress(oracle.address);
 
+    await expectException(coinfort.connect(sender).approveTransaction(1), "Can only be called by the Oracle contract!");
     await oracle.connect(owner).conditionSatisfied(1);
 
     const balanceBefore = await coin.connect(receiver).balanceOf(receiver.address);
@@ -136,6 +139,51 @@ describe("Coinfort Test", function () {
     await ethers.provider.send("evm_mine", []);
 
     await expectException(coinfort.connect(receiver).closeTransaction(1), "Transaction has been closed!");
-
   });
+
+  it("Should correctly Withdraw Altcoins", async () => {
+    await coin.connect(owner).transfer(coinfort.address, 500);
+    await expectException(coinfort.connect(sender).withdrawAlts(sender.address, coin.address, 500), 'Caller is not the owner neither manager!');
+    const balanceBefore = await coin.connect(manager).balanceOf(manager.address);
+    await expect(balanceBefore).to.equal(0);
+    await coinfort.connect(manager).withdrawAlts(manager.address, coin.address, 500);
+    const balanceAfter = await coin.connect(manager).balanceOf(manager.address);
+    await expect(balanceAfter).to.equal(500);
+  });
+
+  it("Should correctly return Transaction data", async () => {
+    await coinfort.connect(manager).openAccount();
+    await coin.connect(manager).approve(coinfort.address, 500);
+    coinfort.connect(manager).initializeTransaction(receiver.address, coin.address, 500, 1000);
+
+    const [coinAmmount,
+      senderSerialNumber, 
+      transactionOpenTime,
+      transactionCloseTime,
+      coinAddress,
+      receiverAddress,
+      senderAddress,
+      transactionApproved,
+      transactionClosed,
+      transactionPaused] = await coinfort.connect(manager).getTransactionData(2);
+    await expect (coinAmmount,
+      senderSerialNumber, 
+      coinAddress,
+      receiverAddress,
+      senderAddress,
+      transactionApproved,
+      transactionClosed,
+      transactionPaused).to.equal(500, 2, coin.address, receiver.address,manager.address,false,false,false);
+  });
+
+  it("Should correctly return Account data", async () => {
+    const [, acountSerialNumber, accountPaused] = await coinfort.connect(manager).getAccountData(manager.address);
+    await expect (acountSerialNumber, accountPaused).to.equal(2, false );
+  });
+
+  it("Should correctly return Account Balance", async () => {
+    const balanceBefore = await coinfort.connect(manager).getAccountBalance(manager.address, coin.address);
+    await expect(balanceBefore).to.equal(500);
+  });
+
 });
