@@ -1,33 +1,46 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
-const hre = require("hardhat");
+const { ethers, network, run} = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
 
-  const lockedAmount = hre.ethers.parseEther("0.001");
+    // Addresses 
+    const managerAddress = "0xf014Bd32689608dA08d96f9Ad812C0De7946a824";
 
-  const lock = await hre.ethers.deployContract("Lock", [unlockTime], {
-    value: lockedAmount,
-  });
+    // // Deploy Coinfort and Oracle
 
-  await lock.waitForDeployment();
+    const COINFORT = await ethers.getContractFactory('Coinfort');
+    const coinfort = await COINFORT.deploy(managerAddress);
 
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`
-  );
+    console.log( "Coinfort: " + coinfort.address );
+
+
+    const ORACLE = await ethers.getContractFactory('Oracle');
+    const oracle = await ORACLE.deploy(managerAddress, coinfort.address);
+
+    console.log( "Oracle: " + oracle.address );
+    const WAIT_BLOCK_CONFIRMATIONS = 3;
+    await oracle.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
+
+    //Verify Coinfort and Oracle contracts
+
+    await run(`verify:verify`, {
+      address: coinfort.address,
+      constructorArguments: [managerAddress],
+    });
+
+    await run(`verify:verify`, {
+      address: oracle.address,
+      constructorArguments: [managerAddress, coinfort.address],
+    });
+
+
+    // Set Oracle address 
+    await coinfort.setOracleAddress(oracle.address);
+
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+main()
+    .then(() => process.exit())
+    .catch(error => {
+        console.error(error);
+        process.exit(1);
 });

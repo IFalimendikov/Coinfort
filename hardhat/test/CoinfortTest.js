@@ -13,7 +13,7 @@ const zeroAddr = "0x0000000000000000000000000000000000000000";
 const notZeroAddr = "0x000000000000000000000000000000000000dead";
 
 let signers;
-let owner, alice, bob, minter, burner; 
+let owner, manager, sender, receiver; 
 
 describe("Coinfort Test", function () {
   before("Setup", async () => {
@@ -185,5 +185,4 @@ describe("Coinfort Test", function () {
     const balanceBefore = await coinfort.connect(manager).getAccountBalance(manager.address, coin.address);
     await expect(balanceBefore).to.equal(500);
   });
-
 });

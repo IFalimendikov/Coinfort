@@ -31,7 +31,7 @@
 // SPDX-License-Identifier: MIT
 
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import "./Coinfort.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -57,7 +57,7 @@ contract Oracle is Ownable {
     // Constructor
     //--------------------------------------------------------
 
-    constructor(address _coinfortAddress, address _managerAddress) {
+    constructor( address _managerAddress, address _coinfortAddress) {
         managerAddress = _managerAddress; // Appoint manager
         coinfort = Coinfort(_coinfortAddress); // Create Coinfort contract instance
     }

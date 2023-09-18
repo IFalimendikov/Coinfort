@@ -31,7 +31,7 @@
 // SPDX-License-Identifier: MIT
 
 
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -148,11 +148,13 @@ contract Coinfort is Ownable {
         require(receiver != address(0), "Must be a real address!"); // Can't send to a non-zero address
         require(receiver != msg.sender, "Can't send to yourself!");
         require(timeout >= MIN_DELAY, "Minimal timeout is 15 minutes!");
-        require(approvedCoins[tokenAddress], "Token is not approved for transaction!"); // Only approved ERC20 coins could be deposited
+        require(approvedCoins[tokenAddress] == true, "Token is not approved for transaction!"); // Only approved ERC20 coins could be deposited
         require(accounts[msg.sender].accountOpenTime != 0, "Account is not found!"); // Need to open account to make a deposit
         require(!accounts[msg.sender].accountPaused, "Coinfort investigating the account!"); // Admin can pause all movements of account
 
         token = IERC20(tokenAddress); // Create ERC20 instance
+
+        // IMPORTANT: approve ERC20 function should be called by the frontend before the transfer
 
         token.transferFrom(msg.sender, address(this), amount); // Deposit ERC20 coins to the Coinfort Vault
 
@@ -180,11 +182,11 @@ contract Coinfort is Ownable {
 
         Transaction storage transaction = transactions[transactionId];
 
-        require(!accounts[transaction.senderAddress].accountPaused, "Coinfort investigating the transaction!"); // Admin can pause all movements of account
+        require(!accounts[transaction.senderAddress].accountPaused, "Coinfort investigating the account!"); // Admin can pause all movements of account
         require(!transaction.transactionPaused, "Coinfort investigating the transaction!"); // Admin can pause transaction 
         require(transaction.coinAmmount > 0, "Transaction with the given ID is not found!");
-        require(transaction.transactionClosed, "Transaction has been closed!");
-        require(transaction.transactionApproved || transaction.transactionCloseTime <= block.timestamp); // Check for timeout and Oracle Condition
+        require(!transaction.transactionClosed, "Transaction has been closed!");
+        require(transaction.transactionApproved || transaction.transactionCloseTime <= block.timestamp, "To close a transaction there has to be either a timeout or Oracle condition!"); // Check for timeout and Oracle Condition
         
         token = IERC20(transaction.coinAddress); // Create ERC20 instance
         address receiver = transaction.senderAddress; // Depending on the condition, funds are sent back to depositor or to receiver
@@ -195,6 +197,8 @@ contract Coinfort is Ownable {
         }
 
         accountBalance[transaction.senderAddress][transaction.coinAddress] -= transaction.coinAmmount; // Change ERC20 balance
+        transaction.transactionClosed = true;
+        transaction.transactionCloseTime = block.timestamp;
 
         token.transfer(receiver, transaction.coinAmmount); // Transfer the token 
         emit TransactionClosed(transactionId);
@@ -204,12 +208,16 @@ contract Coinfort is Ownable {
     //  [onlyOwnerOrManager] Administarative functions
     //--------------------------------------------------------
 
-    function pauseAccountTransactions(address accountId, bool _newState) external onlyOwnerOrManager {
+    function pauseAccountSwitch(address accountId, bool _newState) external onlyOwnerOrManager {
         accounts[accountId].accountPaused = _newState; // Pause transaction 
     }
 
     function pauseTransactionSwitch(uint256 transactionId, bool _newState) external onlyOwnerOrManager {
         transactions[transactionId].transactionPaused = _newState; // Pause all account operations
+    }
+
+    function approveCoin(address coinAddress) external onlyOwnerOrManager {
+        approvedCoins[coinAddress] = true; // Adds ERC20 which is allowed to be used for transacting
     }
 
     function setOracleAddress(address _oracleContract) external onlyOwnerOrManager{
@@ -218,10 +226,6 @@ contract Coinfort is Ownable {
 
     function withdrawAlts(address receiver, address tokenAddress, uint256 amount) public payable onlyOwnerOrManager {
         token = IERC20(tokenAddress); // Create ERC20 instance
-
-        require(amount > 0, "Amount must be greater than zero!");
-        require(token.balanceOf(address(this)) >= amount);
-
         token.transfer(receiver, amount);
     }
 
