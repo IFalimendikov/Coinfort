@@ -94,7 +94,7 @@ Coinfort has a degree of upgradability and in a nutshell is an onchain database 
 Potential upgrades:
 1) On-chain banking services.
 2) On-chain investment services.
-3) Staking, launching proprietary coin.
+3) Staking, launching own proprietary coin.
 4) Integrating application to an off-chain financial service.
 5) Addition of more external Oracle conditions.
 6) Integrating an off-chain database.
