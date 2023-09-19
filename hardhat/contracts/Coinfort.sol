@@ -49,10 +49,10 @@ contract Coinfort is Ownable {
     address public oracleContract; // Oracle contract instance
     address public managerAddress; // Manager address
 
-    mapping(address => Account) public accounts; // address => Account struct
+    mapping(address => Account) public accounts; // address of the depositor => Account struct
     mapping(uint256 => Transaction) private transactions; // Transaction IDs => Transaction structs 
     mapping(address => bool) public approvedCoins; // ERC20 Addresses => Bool (Maps all approved for deposit ERC20
-    mapping(address => mapping(address => uint256)) public accountBalance; // address of depositor => (ERC20 address => balance)
+    mapping(address => mapping(address => uint256)) public accountBalance; // address of depositor => (ERC20 address => balance in coins)
    
     IERC20 public token;
 
@@ -107,15 +107,15 @@ contract Coinfort is Ownable {
         address coinAddress; // Address of the ERC20 coin to be sent 
         address receiverAddress; // Address of the receiver
         address senderAddress;
-        bool transactionApproved; // Boolean checking for Oracle driven conditional approval
-        bool transactionClosed; // Boolean checking whether the transaction is closed
-        bool transactionPaused; // Admin can pause the transaction fulfilment 
+        bool transactionApproved; // Boolean checking for Oracle driven conditional statement
+        bool transactionClosed; // Boolean checking whether the transaction was closed
+        bool transactionPaused; // Admin can pause transaction fulfilment 
     }
 
     //--------------------------------------------------------
     //  [External] Function to open an account
     //--------------------------------------------------------
-    //  To open a transaction and make a deposit, user needs to open an account.
+    //  To start a transaction and make a deposit, user needs to open an account.
     //--------------------------------------------------------
 
     function openAccount() external {
@@ -135,7 +135,7 @@ contract Coinfort is Ownable {
     //--------------------------------------------------------
     //  [External] Main functions for Initializing and Closing transactions
     //--------------------------------------------------------
-    //  By Initializing user opens a transaction with set conditionals.
+    //  By Initializing user opens a transaction with set data.
     //
     //  Transaction closure happens in two cases:
     //  1) After a timeout set by sender, if the Oracle driven condition wasn't met, funds are sent back to the sender.
@@ -149,7 +149,7 @@ contract Coinfort is Ownable {
         require(receiver != msg.sender, "Can't send to yourself!");
         require(timeout >= MIN_DELAY, "Minimal timeout is 15 minutes!");
         require(approvedCoins[tokenAddress] == true, "Token is not approved for transaction!"); // Only approved ERC20 coins could be deposited
-        require(accounts[msg.sender].accountOpenTime != 0, "Account is not found!"); // Need to open account to make a deposit
+        require(accounts[msg.sender].accountOpenTime != 0, "Account is not found!"); // Need to open an account to make a deposit
         require(!accounts[msg.sender].accountPaused, "Coinfort investigating the account!"); // Admin can pause all movements of account
 
         token = IERC20(tokenAddress); // Create ERC20 instance
@@ -182,7 +182,7 @@ contract Coinfort is Ownable {
 
         Transaction storage transaction = transactions[transactionId];
 
-        require(!accounts[transaction.senderAddress].accountPaused, "Coinfort investigating the account!"); // Admin can pause all movements of account
+        require(!accounts[transaction.senderAddress].accountPaused, "Coinfort investigating the account!"); // Admin can pause all movements on account
         require(!transaction.transactionPaused, "Coinfort investigating the transaction!"); // Admin can pause transaction 
         require(transaction.coinAmmount > 0, "Transaction with the given ID is not found!");
         require(!transaction.transactionClosed, "Transaction has been closed!");
@@ -201,6 +201,7 @@ contract Coinfort is Ownable {
         transaction.transactionCloseTime = block.timestamp;
 
         token.transfer(receiver, transaction.coinAmmount); // Transfer the token 
+       
         emit TransactionClosed(transactionId);
     }
 
@@ -208,12 +209,12 @@ contract Coinfort is Ownable {
     //  [onlyOwnerOrManager] Administarative functions
     //--------------------------------------------------------
 
-    function pauseAccountSwitch(address accountId, bool _newState) external onlyOwnerOrManager {
-        accounts[accountId].accountPaused = _newState; // Pause transaction 
+    function pauseAccountSwitch(address accountAddress, bool _newState) external onlyOwnerOrManager {
+        accounts[accountAddress].accountPaused = _newState; // Pause all account operations
     }
 
     function pauseTransactionSwitch(uint256 transactionId, bool _newState) external onlyOwnerOrManager {
-        transactions[transactionId].transactionPaused = _newState; // Pause all account operations
+        transactions[transactionId].transactionPaused = _newState; // Pause transaction
     }
 
     function approveCoin(address coinAddress) external onlyOwnerOrManager {
@@ -251,7 +252,7 @@ contract Coinfort is Ownable {
     function approveTransaction(uint256 transactionId) external {
         require(msg.sender == oracleContract, "Can only be called by the Oracle contract!"); // Checks for Oracle address
         require(transactions[transactionId].coinAmmount > 0, "Transaction is not found!");
-        require(transactions[transactionId].transactionApproved != true, "Transaction already approved!");
+        require(!transactions[transactionId].transactionApproved, "Transaction already approved!");
 
         transactions[transactionId].transactionApproved = true;
 
@@ -261,7 +262,7 @@ contract Coinfort is Ownable {
     //--------------------------------------------------------
     //  [View] Data getter functions
     //--------------------------------------------------------
-    //  Helper functions for Frontend return: Transaction struct, Account struct, Account balance.
+    //  Helper functions for Frontend: Transaction struct, Account struct, Account balance.
     //--------------------------------------------------------
 
     function getTransactionData(uint256 transactionId) external view returns (Transaction memory) {
@@ -271,13 +272,13 @@ contract Coinfort is Ownable {
     }
 
     function getAccountData(address accountAddress) external view returns (Account memory) {
-        require (accounts[accountAddress].accountOpenTime > 0, "Account is not found!");
+        require(accounts[accountAddress].accountOpenTime > 0, "Account is not found!");
 
         return accounts[accountAddress];
     }
 
     function getAccountBalance(address accountAddress, address coinAddress) external view returns (uint256) {
-        require (accounts[accountAddress].accountOpenTime > 0, "Account is not found!");
+        require(accounts[accountAddress].accountOpenTime > 0, "Account is not found!");
 
         return accountBalance[accountAddress][coinAddress];
     }
