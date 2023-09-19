@@ -47,12 +47,12 @@ module.exports = {
 
     mainnet: {
       url: "https://eth-mainnet.g.alchemy.com/v2/GVXuT70D8zhAUh1OpTUqox4IspgKG9hU",
-      accounts:  ["0x9e650e31f11c9e9977c4cbe18e2ef8fe6429519b78454ca04c909b8a86210fc2"],
+      accounts:  ["0xd1b4b395251dc436aa67f2e466896e1db5cead91db550dfe5c59832646612aca"],
     },
 
     sepolia: {
       url: "https://eth-sepolia.g.alchemy.com/v2/wjjmnkDh0iZjVS5fKa3gewlZ9sUjSJ7Y",
-      accounts:  ["0x9e650e31f11c9e9977c4cbe18e2ef8fe6429519b78454ca04c909b8a86210fc2"],
+      accounts:  ["0xd1b4b395251dc436aa67f2e466896e1db5cead91db550dfe5c59832646612aca"],
     },
 
     hardhat: {}
