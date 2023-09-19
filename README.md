@@ -88,7 +88,7 @@ Unit tests were simulating attacks on the application's logic, below test result
 ## Deployment
 You can find deployment script in the **scripts** folder. Script automatically deploys and verifies Coinfort and Oracle smart contract onchain using **Hardhat** and **Ethers** packages.
 
-## Potential upgrades
+## Potential upgrade cases
 Coinfort has a degree of upgradability and in a nutshell is an onchain database which could further improved with additional applications for the commercial financial use-cases.
 
 Potential upgrades:
