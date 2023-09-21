@@ -51,7 +51,7 @@ contract Coinfort is Ownable {
 
     mapping(address => Account) public accounts; // address of the depositor => Account struct
     mapping(uint256 => Transaction) private transactions; // Transaction IDs => Transaction structs 
-    mapping(address => bool) public approvedCoins; // ERC20 Addresses => Bool (Maps all approved for deposit ERC20
+    mapping(address => bool) public approvedCoins; // ERC20 Addresses => Bool (Maps all approved for deposit ERC20)
     mapping(address => mapping(address => uint256)) public accountBalance; // address of depositor => (ERC20 address => balance in coins)
    
     IERC20 public token;
